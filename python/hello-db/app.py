@@ -1,7 +1,6 @@
 # encoding: UTF-8
 import argparse
 
-import json
 from datetime import date
 
 ## Веб сервер
@@ -53,18 +52,19 @@ class App(object):
 
     @cherrypy.expose
     def planets(self, planet_id = None):
-        db = pg_driver.connect(user="postgres", password="", host="localhost")
-        cur = db.cursor()
-        if planet_id is None:
-            cur.execute("SELECT F.id, F.date, P.name, P.distance FROM Flight F JOIN Planet P ON F.planet_id = P.id")
-        else:
-            cur.execute("SELECT F.id, F.date, P.name, P.distance FROM Flight F JOIN Planet P ON F.planet_id = P.id WHERE P.id = %s", planet_id)
+        with pg_driver.connect(user=args.pg_user, password=args.pg_password, host=args.pg_host, port=args.pg_port) as db:
+	        cur = db.cursor()
+	        if planet_id is None:
+	            cur.execute("SELECT * FROM Planet P")
+	        else:
+	            cur.execute("SELECT * FROM Planet P WHERE P.id = %s", planet_id)
 
-        result = []
-        flights = cur.fetchall()
-        for f in flights:
-            result.append({"flight_id": f[0], "date": str(f[1]), "planet_name": f[2], "distance": str(f[3])})
-        return json.dumps(result)
+	        result = []
+	        planets = cur.fetchall()
+	        for p in planets:
+	            result.append(p)
+	        cherrypy.response.headers['Content-Type'] = 'text/plain; charset=utf-8'  
+	        return "\n".join([str(p) for p in planets])
 
 if __name__ == '__main__':
     cherrypy.quickstart(App())
